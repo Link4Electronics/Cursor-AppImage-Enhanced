@@ -1,16 +1,13 @@
 #!/bin/sh
 
 set -eu
-ARCH="$(uname -m)"
-DEB_SOURCE="https://cursor.com/download"
-EXTRA_PACKAGES="https://raw.githubusercontent.com/pkgforge-dev/Anylinux-AppImages/refs/heads/main/useful-tools/get-debloated-pkgs.sh"
+
+ARCH=$(uname -m)
 
 echo "Installing dependencies..."
 echo "---------------------------------------------------------------"
 pacman -Syu --noconfirm \
 	base-devel        \
-	curl              \
-	git               \
 	inetutils         \
 	libx11            \
 	libxrandr         \
@@ -18,33 +15,28 @@ pacman -Syu --noconfirm \
 	nss               \
 	pulseaudio        \
 	pulseaudio-alsa   \
-	pipewire-audio    \
-	wget              \
-	xorg-server-xvfb  \
-	zsync
+	pipewire-audio
 
 if [ "$ARCH" = 'x86_64' ]; then
-		pacman -Syu --noconfirm libva-intel-driver
+	pacman -Syu --noconfirm libva-intel-driver
 fi
 
 echo "Installing debloated packages..."
 echo "---------------------------------------------------------------"
-wget --retry-connrefused --tries=30 "$EXTRA_PACKAGES" -O ./get-debloated-pkgs.sh
-chmod +x ./get-debloated-pkgs.sh
-./get-debloated-pkgs.sh --add-common --prefer-nano ffmpeg-mini intel-media-driver-mini
+get-debloated-pkgs --add-common --prefer-nano ffmpeg-mini intel-media-driver-mini
 
 echo "Getting Cursor..."
 echo "---------------------------------------------------------------"
+DEB_SOURCE="https://cursor.com/download"
 case "$ARCH" in # they use AMD64 and ARM64 for the deb links
 	x86_64)  deb_arch=x64;;
 	aarch64) deb_arch=arm64;;
 esac
 
-DEB_LINK=$(
-	wget --retry-connrefused --tries=30 "$DEB_SOURCE" -O - \
-		| sed 's/[()",{} ]/\n/g'                            \
-		| grep "https.*download.*linux.*$deb_arch.*deb" \
-		| head -1
+DEB_LINK=$(wget --retry-connrefused --tries=30 "$DEB_SOURCE" -O - \
+	| sed 's/[()",{} ]/\n/g'                        \
+	| grep "https.*download.*linux.*$deb_arch.*deb" \
+	| head -1
 )
 
 if ! wget --retry-connrefused --tries=30 "$DEB_LINK" -O /tmp/cursor.deb 2>/tmp/download.log; then
